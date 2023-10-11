@@ -1,0 +1,173 @@
+---
+title: "Reviewer_comments"
+author: "Iza"
+date: "2023-10-10"
+output: html_document
+---
+
+Load packages
+
+```{r}
+library(tidyverse)
+library(readr)
+library(readxl)
+library(clusterProfiler)
+
+```
+
+Load the mirtarbase table
+```{r}
+miRTarBase_MTI <- read_excel("ref/miRTarBase_MTI.xlsx")
+```
+
+Load the mirtarbase table
+```{r}
+miRTarBase_MTI <- read_excel("ref/miRTarBase_MTI.xlsx")
+```
+
+filter only human
+```{r}
+miRTarBase_MTI <-miRTarBase_MTI %>% filter(`Species (miRNA)` == "Homo sapiens")
+```
+
+filter support type not weak
+
+```{r}
+miRTarBase_MTI_notweak <-miRTarBase_MTI %>% filter(`Support Type` == "Functional MTI")
+```
+
+Load c2
+
+```{r}
+c2_full <-read.gmt("ref/c2.cp.v2023.1.Hs.symbols.gmt.txt")
+```
+
+
+Get the tables for the specific microRNAs
+
+1274a
+```{r}
+"hsa-miR-1274a"
+
+table_1274a <-miRTarBase_MTI %>% filter(miRNA == "hsa-miR-1274a")
+
+```
+
+193a-5p
+
+```{r}
+"hsa-miR-193a-5p"
+
+table_193a <-miRTarBase_MTI %>% filter(miRNA == "hsa-miR-193a-5p")
+
+```
+
+28-3p
+```{r}
+"hsa-miR-28-3p"
+
+table_28_3p <-miRTarBase_MTI %>% filter(miRNA == "hsa-miR-28-3p")
+
+```
+
+30a-3p
+
+```{r}
+"hsa-miR-30a-3p"
+
+table_30a_3p <-miRTarBase_MTI %>% filter(miRNA == "hsa-miR-30a-3p")
+
+```
+
+145
+```{r}
+"hsa-miR-145-3p"
+"hsa-miR-145-5p"
+
+table_145 <-miRTarBase_MTI %>% filter(miRNA %in% c("hsa-miR-145-3p", "hsa-miR-145-5p"))
+
+```
+
+19b
+```{r}
+"hsa-miR-19b-3p"
+"hsa-miR-19b-5p"
+
+table_19b <-miRTarBase_MTI %>% filter(miRNA %in% c("hsa-miR-19b-3p", "hsa-miR-19b-5p"))
+
+```
+
+
+143
+```{r}
+"hsa-miR-143-3p"
+"hsa-miR-143-5p"
+
+table_143 <-miRTarBase_MTI %>% filter(miRNA %in% c("hsa-miR-143-3p", "hsa-miR-143-5p"))
+```
+
+Total number of miRNA: 10
+
+Enrich 1000 random miRNA
+
+Sample 10 random miRNA from the mirTarBase Functional MTI table and enrich them separately saving on a list
+
+```{r}
+enrichment_results_list <- list()
+num_random_samples <- 1000
+set.seed(777)
+
+for (i in 1:num_random_samples) {
+  random_sample_miRNAs <- sample(miRTarBase_MTI$miRNA, size =
+                                   1,
+                                 replace = TRUE)
+  random_sample_MTI <- miRTarBase_MTI[miRTarBase_MTI$miRNA %in%
+                                        random_sample_miRNAs, ]
+  target_genes <- unique(random_sample_MTI$`Target Gene`)
+  random_enrichment <- enricher(gene = target_genes, TERM2GENE = c2_full,pvalueCutoff = 0.05, pAdjustMethod = "BH")
+  enrichment_results_list[[i]] <- as.data.frame(random_enrichment)
+}
+
+
+```
+
+Count the times each pathway appears on the 1000 lists and save it on a data.frame
+```{r}
+pathway_counts <- list()
+
+for (i in 1:1000) {
+  current_iteration <- enrichment_results_list[[i]]$ID
+  for (pathway in current_iteration) {
+    if (pathway %in% names(pathway_counts)) {
+      pathway_counts[[pathway]] <- pathway_counts[[pathway]] + 1
+    } else {
+      pathway_counts[[pathway]] <- 1
+    }
+  }
+}
+
+pathway_counts_df <- data.frame(Pathway = names(pathway_counts), Count = unlist(pathway_counts))
+
+```
+
+From our selected pathways
+
+WP_EGFEGFR_SIGNALING_PATHWAY
+WP_MAPK_SIGNALING_PATHWAY
+KEGG_MAPK_SIGNALING_PATHWAY
+WP_MAPK_CASCADE
+WP_TGFBETA_SIGNALING_PATHWAY
+WP_DNA_DAMAGE_RESPONSE_ONLY_ATM_DEPENDENT
+REACTOME_INTRACELLULAR_SIGNALING_BY_SECOND_MESSENGERS
+
+Only the MAPK associated pathways (WP_MAPK_SIGNALING_PATHWAY, KEGG_MAPK_SIGNALING_PATHWAY, WP_MAPK_CASCADE) were not present in over 10% of the random microRNAs enrichment so we decided, following the reviewer comments to focus the discussion on those pathways
+
+
+
+
+
+
+
+
+
+
